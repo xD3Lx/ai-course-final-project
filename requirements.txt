@@ -1,0 +1,23 @@
+# Backend
+fastapi>=0.111
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+
+# Multi-agent orchestration
+langgraph>=0.2.0
+
+# LLM (OpenRouter via OpenAI-compatible client)
+openai>=1.40
+
+# Databricks (real SDK)
+databricks-sql-connector>=3.4.0
+databricks-sdk>=0.30.0
+
+# SQL validation
+sqlglot>=25.0
+
+# UI
+streamlit>=1.36
+requests>=2.32
