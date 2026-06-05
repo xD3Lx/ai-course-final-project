@@ -31,6 +31,13 @@ class ResultPreviewOut(BaseModel):
     truncated: bool = False
 
 
+class AgentStepOut(BaseModel):
+    agent: str
+    summary: str
+    duration_ms: float = 0.0
+    ok: bool = True
+
+
 class TranslateResponse(BaseModel):
     session_id: str
     status: str  # clarify | done | failed
@@ -44,6 +51,7 @@ class TranslateResponse(BaseModel):
     result: Optional[ResultPreviewOut] = None
     explanation: str = ""
     error: str = ""
+    trace: list[AgentStepOut] = Field(default_factory=list)
 
 
 class ExecuteResponse(BaseModel):

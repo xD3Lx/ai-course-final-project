@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
+    AgentStepOut,
     ClarifyRequest,
     ExecuteRequest,
     ExecuteResponse,
@@ -44,6 +45,15 @@ def _to_response(session_id: str, final: dict | GraphState) -> TranslateResponse
         result=result,
         explanation=state.explanation,
         error=state.error,
+        trace=[
+            AgentStepOut(
+                agent=s.agent,
+                summary=s.summary,
+                duration_ms=s.duration_ms,
+                ok=s.ok,
+            )
+            for s in state.trace
+        ],
     )
 
 

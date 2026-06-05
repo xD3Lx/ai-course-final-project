@@ -21,7 +21,11 @@ def explain(state: GraphState, deps: Deps) -> dict:
         text = deps.llm.complete(
             role="explainer",
             system=(
-                "You explain SQL to non-technical users in 2-4 short sentences."
+                "Explain what THIS specific query does and what its result shows, "
+                "in 2-4 short sentences. Do NOT explain what SQL is in general, do "
+                "not define SQL or databases, and do not add any preamble or "
+                "analogies (e.g. 'SQL is a special language...'). Start directly "
+                "with what the query returns."
             ),
             user=user,
         )

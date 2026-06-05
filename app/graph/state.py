@@ -1,11 +1,21 @@
 """Shared LangGraph state passed between agent nodes."""
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+import operator
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 Status = Literal["clarify", "running", "done", "failed"]
+
+
+class AgentStep(BaseModel):
+    """One entry in the multi-agent execution trace."""
+
+    agent: str
+    summary: str
+    duration_ms: float = 0.0
+    ok: bool = True
 
 
 class ValidationResult(BaseModel):
@@ -44,3 +54,6 @@ class GraphState(BaseModel):
     explanation: str = ""
     status: Status = "running"
     error: str = ""
+
+    # execution trace (appended to by each agent via a reducer)
+    trace: Annotated[list[AgentStep], operator.add] = Field(default_factory=list)

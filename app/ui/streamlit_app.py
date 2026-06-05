@@ -56,8 +56,37 @@ if st.button("Translate", type="primary", disabled=not request.strip()):
 res = st.session_state.result
 
 
+AGENT_ICONS = {
+    "clarify": "🧭",
+    "retrieve_schema": "🗂️",
+    "generate": "✍️",
+    "validate": "✅",
+    "repair": "🔧",
+    "execute": "▶️",
+    "explain": "💬",
+}
+
+
+def render_trace(trace: list[dict]) -> None:
+    if not trace:
+        return
+    total = sum(s.get("duration_ms", 0) for s in trace)
+    with st.expander(f"🧩 Agent trace — {len(trace)} steps, {total:.0f} ms", expanded=True):
+        for i, step in enumerate(trace, 1):
+            icon = AGENT_ICONS.get(step["agent"], "•")
+            mark = "✅" if step.get("ok", True) else "⚠️"
+            st.markdown(
+                f"**{i}. {icon} {step['agent']}** {mark} "
+                f"<span style='color:gray'>· {step.get('duration_ms', 0):.0f} ms</span><br>"
+                f"<span style='color:#444'>{step['summary']}</span>",
+                unsafe_allow_html=True,
+            )
+
+
 def render(res: dict) -> None:
     status = res.get("status")
+
+    render_trace(res.get("trace", []))
 
     if status == "clarify":
         st.info("The assistant needs a bit more detail:")
