@@ -7,6 +7,7 @@ import uuid
 from typing import Any, Iterator
 
 from fastapi import APIRouter, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 
 from app.api.schemas import (
@@ -101,19 +102,28 @@ def _stream_run(session_id: str, state: GraphState) -> StreamingResponse:
     graph = get_graph()
     config = {"configurable": {"thread_id": session_id}}
 
+    def _ndjson(obj: Any) -> str:
+        # jsonable_encoder handles datetime, Decimal, etc. that json.dumps can't.
+        return json.dumps(jsonable_encoder(obj)) + "\n"
+
     def gen() -> Iterator[str]:
+        final = None
         try:
-            for chunk in graph.stream(state, config=config, stream_mode="updates"):
-                for node, update in chunk.items():
-                    yield json.dumps(_step_payload(node, update)) + "\n"
-            final = graph.get_state(config).values
-            resp = _to_response(session_id, final)
-            yield json.dumps({"event": "done", "data": resp.model_dump()}) + "\n"
+            for mode, data in graph.stream(
+                state, config=config, stream_mode=["updates", "values"]
+            ):
+                if mode == "updates":
+                    for node, update in data.items():
+                        yield _ndjson(_step_payload(node, update))
+                elif mode == "values":
+                    final = data  # last full-state snapshot wins
+            resp = _to_response(session_id, final or {})
+            yield _ndjson({"event": "done", "data": resp.model_dump()})
         except Exception as exc:  # noqa: BLE001
             logger.exception("Streaming run failed for session %s", session_id)
-            yield json.dumps(
+            yield _ndjson(
                 {"event": "error", "detail": f"{type(exc).__name__}: {exc}"}
-            ) + "\n"
+            )
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
 
