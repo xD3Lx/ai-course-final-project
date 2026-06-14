@@ -40,6 +40,8 @@ class GraphState(BaseModel):
     user_request: str
     clarifications: list[str] = Field(default_factory=list)  # answers from user
     auto_execute: bool = False
+    # Optional per-request Databricks catalog; empty -> fall back to settings.
+    catalog: str = ""
 
     # working memory
     refined_request: str = ""

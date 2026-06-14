@@ -63,25 +63,31 @@ class DatabricksClient:
             access_token=self.settings.databricks_token,
         )
 
+    # ---- namespace introspection ----
+    def list_catalogs(self) -> list[str]:
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute("SHOW CATALOGS")
+            names = [str(r[0]) for r in cur.fetchall()]
+        return sorted(names)
+
     # ---- schema introspection ----
-    def list_tables_with_columns(
-        self, catalog: str | None = None, schema: str | None = None
-    ) -> list[TableInfo]:
+    def list_tables_with_columns(self, catalog: str | None = None) -> list[TableInfo]:
+        """Scan ALL tables (every schema) in the given catalog."""
         catalog = catalog or self.settings.databricks_catalog
-        schema = schema or self.settings.databricks_schema
         query = f"""
-            SELECT table_name, column_name, data_type, ordinal_position
+            SELECT table_schema, table_name, column_name, data_type, ordinal_position
             FROM {catalog}.information_schema.columns
-            WHERE table_schema = '{schema}'
-            ORDER BY table_name, ordinal_position
+            WHERE table_schema <> 'information_schema'
+            ORDER BY table_schema, table_name, ordinal_position
         """
-        tables: dict[str, TableInfo] = {}
+        tables: dict[tuple[str, str], TableInfo] = {}
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(query)
-            for table_name, column_name, data_type, _pos in cur.fetchall():
-                key = table_name
+            for table_schema, table_name, column_name, data_type, _pos in cur.fetchall():
+                key = (table_schema, table_name)
                 ti = tables.setdefault(
-                    key, TableInfo(catalog=catalog, schema=schema, table=table_name)
+                    key,
+                    TableInfo(catalog=catalog, schema=table_schema, table=table_name),
                 )
                 ti.columns.append(ColumnInfo(name=column_name, data_type=str(data_type)))
         return list(tables.values())

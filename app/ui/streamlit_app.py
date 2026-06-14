@@ -90,9 +90,44 @@ def run_with_progress(path: str, payload: dict) -> dict | None:
 st.session_state.setdefault("result", None)
 st.session_state.setdefault("awaiting", None)  # holds clarification context
 
+
+@st.cache_data(ttl=60)
+def _fetch_config() -> dict:
+    try:
+        return requests.get(f"{API}/config", timeout=5).json()
+    except Exception:  # noqa: BLE001
+        return {"catalog": ""}
+
+
+@st.cache_data(ttl=300)
+def _fetch_catalogs() -> list[str]:
+    resp = requests.get(f"{API}/catalogs", timeout=30)
+    resp.raise_for_status()
+    return resp.json().get("catalogs", [])
+
+
+def _select_with_default(label: str, options: list[str], default: str) -> str:
+    """A selectbox that defaults to `default` when it's in the options."""
+    index = options.index(default) if default in options else 0
+    return st.selectbox(label, options, index=index)
+
+
 with st.sidebar:
     st.subheader("Settings")
     auto_exec = st.toggle("Auto-execute valid query", value=False)
+
+    cfg = _fetch_config()
+    st.markdown("**Databricks catalog**")
+
+    # Catalog dropdown (falls back to a text input if listing fails).
+    try:
+        catalogs = _fetch_catalogs()
+        catalog = _select_with_default("Catalog", catalogs, cfg.get("catalog", ""))
+    except Exception as exc:  # noqa: BLE001
+        st.warning(f"Couldn't list catalogs ({exc}); enter manually.")
+        catalog = st.text_input("Catalog", value=cfg.get("catalog", ""))
+    st.caption("The schema agent scans all tables across every schema in this catalog.")
+
     st.write(f"API: `{API}`")
     try:
         ok = requests.get(f"{API}/health", timeout=5).json().get("status")
@@ -108,7 +143,12 @@ request = st.text_area(
 
 if st.button("Translate", type="primary", disabled=not request.strip()):
     result = run_with_progress(
-        "/translate/stream", {"request": request, "auto_execute": auto_exec}
+        "/translate/stream",
+        {
+            "request": request,
+            "auto_execute": auto_exec,
+            "catalog": catalog or None,
+        },
     )
     if result is not None:
         st.session_state.result = result
@@ -149,6 +189,7 @@ def render(res: dict) -> None:
                 "request": request,
                 "answers": [a for a in answers if a.strip()],
                 "auto_execute": auto_exec,
+                "catalog": catalog or None,
             }
             result = run_with_progress("/clarify/stream", payload)
             if result is not None:

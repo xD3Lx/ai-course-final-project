@@ -13,12 +13,14 @@ from fastapi.responses import StreamingResponse
 from app.api.schemas import (
     AgentStepOut,
     ClarifyRequest,
+    ConfigResponse,
     ExecuteRequest,
     ExecuteResponse,
     ResultPreviewOut,
     TranslateRequest,
     TranslateResponse,
 )
+from app.config import get_settings
 from app.graph.state import GraphState
 from app.runtime import get_deps, get_graph
 
@@ -133,17 +135,46 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@router.get("/config", response_model=ConfigResponse)
+def config() -> ConfigResponse:
+    s = get_settings()
+    return ConfigResponse(
+        catalog=s.databricks_catalog,
+        read_only=s.read_only,
+        result_row_limit=s.result_row_limit,
+    )
+
+
+@router.get("/catalogs")
+def catalogs() -> dict:
+    try:
+        return {"catalogs": get_deps().db.list_catalogs()}
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Listing catalogs failed")
+        raise HTTPException(
+            status_code=502, detail=f"{type(exc).__name__}: {exc}"
+        ) from exc
+
+
 @router.post("/translate", response_model=TranslateResponse)
 def translate(req: TranslateRequest) -> TranslateResponse:
     session_id = uuid.uuid4().hex
-    state = GraphState(user_request=req.request, auto_execute=req.auto_execute)
+    state = GraphState(
+        user_request=req.request,
+        auto_execute=req.auto_execute,
+        catalog=req.catalog or "",
+    )
     return _run(session_id, state)
 
 
 @router.post("/translate/stream")
 def translate_stream(req: TranslateRequest) -> StreamingResponse:
     session_id = uuid.uuid4().hex
-    state = GraphState(user_request=req.request, auto_execute=req.auto_execute)
+    state = GraphState(
+        user_request=req.request,
+        auto_execute=req.auto_execute,
+        catalog=req.catalog or "",
+    )
     return _stream_run(session_id, state)
 
 
@@ -153,6 +184,7 @@ def clarify(req: ClarifyRequest) -> TranslateResponse:
         user_request=req.request,
         clarifications=req.answers,
         auto_execute=req.auto_execute,
+        catalog=req.catalog or "",
     )
     return _run(req.session_id or uuid.uuid4().hex, state)
 
@@ -163,6 +195,7 @@ def clarify_stream(req: ClarifyRequest) -> StreamingResponse:
         user_request=req.request,
         clarifications=req.answers,
         auto_execute=req.auto_execute,
+        catalog=req.catalog or "",
     )
     return _stream_run(req.session_id or uuid.uuid4().hex, state)
 

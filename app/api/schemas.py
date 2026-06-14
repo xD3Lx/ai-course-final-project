@@ -11,6 +11,9 @@ class TranslateRequest(BaseModel):
     auto_execute: bool = Field(
         False, description="Run the query immediately if it validates."
     )
+    catalog: Optional[str] = Field(
+        None, description="Databricks catalog to query (defaults to server config)."
+    )
 
 
 class ClarifyRequest(BaseModel):
@@ -18,6 +21,13 @@ class ClarifyRequest(BaseModel):
     request: str
     answers: list[str] = Field(default_factory=list)
     auto_execute: bool = False
+    catalog: Optional[str] = None
+
+
+class ConfigResponse(BaseModel):
+    catalog: str
+    read_only: bool
+    result_row_limit: int
 
 
 class ExecuteRequest(BaseModel):

@@ -26,11 +26,12 @@ def _keyword_rank(request: str, tables: list[TableInfo], top_n: int) -> list[Tab
 
 def retrieve_schema(state: GraphState, deps: Deps) -> dict:
     request = state.refined_request or state.user_request
-    all_tables = deps.db.list_tables_with_columns()
+    catalog = state.catalog or deps.settings.databricks_catalog
+    all_tables = deps.db.list_tables_with_columns(catalog=catalog)
     if not all_tables:
         return {
             "status": "failed",
-            "error": "No tables found in the configured catalog/schema.",
+            "error": f"No tables found in catalog {catalog}.",
         }
 
     candidates = _keyword_rank(request, all_tables, deps.settings.schema_top_tables)

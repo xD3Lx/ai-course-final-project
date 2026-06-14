@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     databricks_http_path: str
     databricks_token: str
     databricks_catalog: str
-    databricks_schema: str
 
     # --- Behaviour ---
     max_repair_attempts: int
