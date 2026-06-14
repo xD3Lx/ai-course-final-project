@@ -1,0 +1,22 @@
+# Never copy the host virtualenv (macOS binaries) over the image venv
+.venv
+venv
+ENV
+
+# Secrets — provide these on Fly via `fly secrets set` (or `docker run --env-file`)
+.env
+
+# VCS / IDE / caches
+.git
+.gitignore
+.idea
+.vscode
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Docs not needed at runtime
+architecture_outline.md
