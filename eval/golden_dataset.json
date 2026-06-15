@@ -1,0 +1,76 @@
+{
+  "catalog": "samples",
+  "description": "Golden NL->Databricks SQL cases against the built-in `samples` catalog (TPCH + NYC taxi). Available in every Databricks workspace.",
+  "cases": [
+    {
+      "id": "tpch_top_customers_by_value",
+      "question": "Show the top 10 customers by their total order value. Return the customer name and the summed order total.",
+      "expected_tables": ["customer", "orders"],
+      "ordered": true,
+      "golden_sql": "SELECT c.c_name, SUM(o.o_totalprice) AS total_value FROM samples.tpch.customer c JOIN samples.tpch.orders o ON c.c_custkey = o.o_custkey GROUP BY c.c_name ORDER BY total_value DESC LIMIT 10"
+    },
+    {
+      "id": "tpch_revenue_by_nation",
+      "question": "What is the total order revenue per nation? Return each nation name and its summed order total, highest first.",
+      "expected_tables": ["customer", "orders", "nation"],
+      "ordered": true,
+      "golden_sql": "SELECT n.n_name, SUM(o.o_totalprice) AS revenue FROM samples.tpch.customer c JOIN samples.tpch.orders o ON c.c_custkey = o.o_custkey JOIN samples.tpch.nation n ON c.c_nationkey = n.n_nationkey GROUP BY n.n_name ORDER BY revenue DESC"
+    },
+    {
+      "id": "tpch_top_nations_by_customers",
+      "question": "Which 5 nations have the most customers? Return the nation name and the customer count.",
+      "expected_tables": ["customer", "nation"],
+      "ordered": true,
+      "golden_sql": "SELECT n.n_name, COUNT(*) AS num_customers FROM samples.tpch.customer c JOIN samples.tpch.nation n ON c.c_nationkey = n.n_nationkey GROUP BY n.n_name ORDER BY num_customers DESC LIMIT 5"
+    },
+    {
+      "id": "tpch_avg_balance_by_segment",
+      "question": "What is the average customer account balance for each market segment?",
+      "expected_tables": ["customer"],
+      "ordered": false,
+      "golden_sql": "SELECT c_mktsegment, AVG(c_acctbal) AS avg_balance FROM samples.tpch.customer GROUP BY c_mktsegment ORDER BY c_mktsegment"
+    },
+    {
+      "id": "tpch_orders_per_month_1995",
+      "question": "How many orders were placed in each calendar month of 1995? Return the month and the order count.",
+      "expected_tables": ["orders"],
+      "ordered": false,
+      "golden_sql": "SELECT date_trunc('MONTH', o_orderdate) AS month, COUNT(*) AS num_orders FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY date_trunc('MONTH', o_orderdate) ORDER BY month"
+    },
+    {
+      "id": "tpch_top_parts_by_quantity",
+      "question": "List the top 10 parts by total quantity ordered across all line items. Return the part name and the total quantity.",
+      "expected_tables": ["lineitem", "part"],
+      "ordered": true,
+      "golden_sql": "SELECT p.p_name, SUM(l.l_quantity) AS total_qty FROM samples.tpch.lineitem l JOIN samples.tpch.part p ON l.l_partkey = p.p_partkey GROUP BY p.p_name ORDER BY total_qty DESC LIMIT 10"
+    },
+    {
+      "id": "tpch_revenue_by_shipmode",
+      "question": "What is the total revenue (extended price after discount) for each ship mode? Return ship mode and revenue, highest first.",
+      "expected_tables": ["lineitem"],
+      "ordered": true,
+      "golden_sql": "SELECT l_shipmode, SUM(l_extendedprice * (1 - l_discount)) AS revenue FROM samples.tpch.lineitem GROUP BY l_shipmode ORDER BY revenue DESC"
+    },
+    {
+      "id": "tpch_customers_without_orders",
+      "question": "Which customers have never placed an order? Return their customer key and name, ordered by customer key, limited to 100.",
+      "expected_tables": ["customer", "orders"],
+      "ordered": false,
+      "golden_sql": "SELECT c.c_custkey, c.c_name FROM samples.tpch.customer c LEFT JOIN samples.tpch.orders o ON c.c_custkey = o.o_custkey WHERE o.o_orderkey IS NULL ORDER BY c.c_custkey LIMIT 100"
+    },
+    {
+      "id": "tpch_top_suppliers_by_inventory",
+      "question": "Find the top 5 suppliers by total inventory value, where inventory value is available quantity times supply cost. Return supplier name and inventory value.",
+      "expected_tables": ["partsupp", "supplier"],
+      "ordered": true,
+      "golden_sql": "SELECT s.s_name, SUM(ps.ps_availqty * ps.ps_supplycost) AS inventory_value FROM samples.tpch.partsupp ps JOIN samples.tpch.supplier s ON ps.ps_suppkey = s.s_suppkey GROUP BY s.s_name ORDER BY inventory_value DESC LIMIT 5"
+    },
+    {
+      "id": "nyctaxi_top_pickup_zips_by_fare",
+      "question": "For NYC taxi trips, what are the top 10 pickup zip codes by average fare amount? Return the pickup zip, average fare, and number of trips.",
+      "expected_tables": ["trips"],
+      "ordered": true,
+      "golden_sql": "SELECT pickup_zip, AVG(fare_amount) AS avg_fare, COUNT(*) AS trips FROM samples.nyctaxi.trips GROUP BY pickup_zip ORDER BY avg_fare DESC LIMIT 10"
+    }
+  ]
+}
