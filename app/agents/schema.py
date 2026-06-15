@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from app.agents.deps import Deps
+from app.agents.deps import Deps, with_cost
 from app.graph.state import GraphState, TableContext
 from app.llm.models import TableSelection
 from app.llm.prompts import SCHEMA_SELECTOR
@@ -38,7 +38,7 @@ def retrieve_schema(state: GraphState, deps: Deps) -> dict:
     catalog_text = "\n".join(t.render() for t in candidates)
 
     # Let the LLM pick the minimal set from candidates.
-    selection = deps.llm.complete_json(
+    selection, usage = deps.llm.complete_json(
         role="schema",
         system=SCHEMA_SELECTOR,
         user=f"Request: {request}\n\nAvailable tables:\n{catalog_text}",
@@ -51,4 +51,4 @@ def retrieve_schema(state: GraphState, deps: Deps) -> dict:
         chosen = candidates
 
     context = [TableContext(fqn=t.fqn, rendered=t.render()) for t in chosen]
-    return {"schema_context": context}
+    return with_cost({"schema_context": context}, usage)

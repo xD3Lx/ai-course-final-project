@@ -59,6 +59,7 @@ def _stream(path: str, payload: dict) -> Iterator[dict]:
 def run_with_progress(path: str, payload: dict) -> dict | None:
     """Drive a streaming run, showing each agent live (Claude-Desktop style)."""
     final = None
+    running_cost = 0.0
     with st.status("Starting agents…", expanded=True) as status:
         try:
             for ev in _stream(path, payload):
@@ -68,15 +69,21 @@ def run_with_progress(path: str, payload: dict) -> dict | None:
                     icon = AGENT_ICONS.get(agent, "•")
                     label = AGENT_LABELS.get(agent, agent)
                     mark = "" if ev.get("ok", True) else " ⚠️"
-                    status.update(label=f"{icon} {label}…")
+                    cost = ev.get("cost_usd", 0.0)
+                    running_cost += cost
+                    status.update(label=f"{icon} {label}… (${running_cost:.4f})")
                     st.write(
                         f"{icon} **{label}**{mark} "
                         f"— {ev.get('summary', '')} "
-                        f"_({ev.get('duration_ms', 0):.0f} ms)_"
+                        f"_({ev.get('duration_ms', 0):.0f} ms · "
+                        f"${cost:.5f} · {ev.get('tokens', 0)} tok)_"
                     )
                 elif kind == "done":
                     final = ev["data"]
-                    status.update(label="✅ Done", state="complete")
+                    total = final.get("total_cost_usd", running_cost)
+                    status.update(
+                        label=f"✅ Done — ${total:.4f} total", state="complete"
+                    )
                 elif kind == "error":
                     status.update(label="❌ Failed", state="error")
                     st.error(ev.get("detail", "Unknown error"))
@@ -157,17 +164,23 @@ if st.button("Translate", type="primary", disabled=not request.strip()):
 res = st.session_state.result
 
 
-def render_trace(trace: list[dict]) -> None:
+def render_trace(trace: list[dict], total_cost: float, total_tokens: int) -> None:
     if not trace:
         return
-    total = sum(s.get("duration_ms", 0) for s in trace)
-    with st.expander(f"🧩 Agent trace — {len(trace)} steps, {total:.0f} ms", expanded=True):
+    total_ms = sum(s.get("duration_ms", 0) for s in trace)
+    title = (
+        f"🧩 Agent trace — {len(trace)} steps · {total_ms:.0f} ms · "
+        f"${total_cost:.4f} · {total_tokens} tokens"
+    )
+    with st.expander(title, expanded=True):
         for i, step in enumerate(trace, 1):
             icon = AGENT_ICONS.get(step["agent"], "•")
             mark = "✅" if step.get("ok", True) else "⚠️"
             st.markdown(
                 f"**{i}. {icon} {step['agent']}** {mark} "
-                f"<span style='color:gray'>· {step.get('duration_ms', 0):.0f} ms</span><br>"
+                f"<span style='color:gray'>· {step.get('duration_ms', 0):.0f} ms "
+                f"· ${step.get('cost_usd', 0.0):.5f} "
+                f"· {step.get('tokens', 0)} tok</span><br>"
                 f"<span style='color:#444'>{step['summary']}</span>",
                 unsafe_allow_html=True,
             )
@@ -176,7 +189,13 @@ def render_trace(trace: list[dict]) -> None:
 def render(res: dict) -> None:
     status = res.get("status")
 
-    render_trace(res.get("trace", []))
+    total_cost = res.get("total_cost_usd", 0.0)
+    total_tokens = res.get("total_tokens", 0)
+    col1, col2 = st.columns(2)
+    col1.metric("Pipeline cost", f"${total_cost:.4f}")
+    col2.metric("Total tokens", f"{total_tokens:,}")
+
+    render_trace(res.get("trace", []), total_cost, total_tokens)
 
     if status == "clarify":
         st.info("The assistant needs a bit more detail:")

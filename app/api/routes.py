@@ -57,9 +57,13 @@ def _to_response(session_id: str, final: dict | GraphState) -> TranslateResponse
                 summary=s.summary,
                 duration_ms=s.duration_ms,
                 ok=s.ok,
+                cost_usd=s.cost_usd,
+                tokens=s.tokens,
             )
             for s in state.trace
         ],
+        total_cost_usd=round(sum(s.cost_usd for s in state.trace), 6),
+        total_tokens=sum(s.tokens for s in state.trace),
     )
 
 
@@ -76,27 +80,37 @@ def _run(session_id: str, state: GraphState) -> TranslateResponse:
     return _to_response(session_id, final)
 
 
+def _field(obj: Any, name: str, default: Any) -> Any:
+    if isinstance(obj, dict):
+        val = obj.get(name, default)
+    else:
+        val = getattr(obj, name, default)
+    return default if val is None else val
+
+
 def _step_payload(node: str, update: Any) -> dict:
     """Turn one streamed node update into a step event."""
     steps = (update or {}).get("trace") if isinstance(update, dict) else None
     if steps:
         s = steps[0]
-        agent = getattr(s, "agent", None) or s["agent"]
-        summary = getattr(s, "summary", None) or s["summary"]
-        duration = getattr(s, "duration_ms", None)
-        if duration is None:
-            duration = s["duration_ms"]
-        ok = getattr(s, "ok", None)
-        if ok is None:
-            ok = s["ok"]
         return {
             "event": "step",
-            "agent": agent,
-            "summary": summary,
-            "duration_ms": duration,
-            "ok": ok,
+            "agent": _field(s, "agent", node),
+            "summary": _field(s, "summary", node),
+            "duration_ms": _field(s, "duration_ms", 0),
+            "ok": _field(s, "ok", True),
+            "cost_usd": _field(s, "cost_usd", 0.0),
+            "tokens": _field(s, "tokens", 0),
         }
-    return {"event": "step", "agent": node, "summary": node, "duration_ms": 0, "ok": True}
+    return {
+        "event": "step",
+        "agent": node,
+        "summary": node,
+        "duration_ms": 0,
+        "ok": True,
+        "cost_usd": 0.0,
+        "tokens": 0,
+    }
 
 
 def _stream_run(session_id: str, state: GraphState) -> StreamingResponse:

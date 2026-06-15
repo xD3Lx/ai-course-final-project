@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from app.config import Settings, get_settings
 from app.llm.provider import LLMProvider
@@ -22,3 +23,10 @@ class Deps:
             llm=LLMProvider(settings),
             db=DatabricksClient(settings),
         )
+
+
+def with_cost(update: dict, usage: Any) -> dict:
+    """Attach an LLM call's cost/tokens to a node update for the tracer."""
+    update["_cost"] = float(getattr(usage, "cost_usd", 0.0) or 0.0)
+    update["_tokens"] = int(getattr(usage, "total_tokens", 0) or 0)
+    return update

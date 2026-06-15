@@ -7,6 +7,7 @@ Sonnet for complex ones).
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Type, TypeVar
 
 from openai import OpenAI
@@ -15,6 +16,22 @@ from pydantic import BaseModel, ValidationError
 from app.config import Settings, get_settings
 
 T = TypeVar("T", bound=BaseModel)
+
+# Fallback prices (USD per 1M tokens: input, output) used only if OpenRouter
+# does not return an actual cost. Approximate; OpenRouter's reported cost wins.
+_FALLBACK_PRICES: dict[str, tuple[float, float]] = {
+    "haiku": (0.80, 4.00),
+    "sonnet": (3.00, 15.00),
+    "opus": (15.00, 75.00),
+}
+
+
+@dataclass
+class CallUsage:
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    cost_usd: float = 0.0
 
 
 class LLMError(RuntimeError):
@@ -48,14 +65,17 @@ class LLMProvider:
         user: str,
         temperature: float = 0.1,
         json_mode: bool = False,
-    ) -> str:
+    ) -> tuple[str, CallUsage]:
+        model = self._model_for(role)
         kwargs: dict = {
-            "model": self._model_for(role),
+            "model": model,
             "temperature": temperature,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
+            # Ask OpenRouter to report the actual cost in the usage object.
+            "extra_body": {"usage": {"include": True}},
         }
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
@@ -63,7 +83,8 @@ class LLMProvider:
             resp = self._client.chat.completions.create(**kwargs)
         except Exception as exc:  # noqa: BLE001 - surface provider errors uniformly
             raise LLMError(f"OpenRouter call failed for role {role!r}: {exc}") from exc
-        return (resp.choices[0].message.content or "").strip()
+        content = (resp.choices[0].message.content or "").strip()
+        return content, _usage_from_response(resp, model)
 
     def complete_json(
         self,
@@ -72,22 +93,51 @@ class LLMProvider:
         user: str,
         schema: Type[T],
         temperature: float = 0.1,
-    ) -> T:
-        """Return a validated Pydantic model parsed from a JSON completion."""
+    ) -> tuple[T, CallUsage]:
+        """Return a validated Pydantic model + token/cost usage for the call."""
         instruction = (
             f"{system}\n\nRespond with a single JSON object matching this schema:\n"
             f"{json.dumps(schema.model_json_schema(), indent=2)}"
         )
-        raw = self.complete(
+        raw, usage = self.complete(
             role, instruction, user, temperature=temperature, json_mode=True
         )
         cleaned = _extract_json(raw)
         try:
-            return schema.model_validate_json(cleaned)
+            return schema.model_validate_json(cleaned), usage
         except ValidationError as exc:
             raise LLMError(
                 f"Model output failed validation for {schema.__name__}: {exc}\nRaw: {raw}"
             ) from exc
+
+
+def _usage_from_response(resp, model: str) -> CallUsage:
+    u = getattr(resp, "usage", None)
+    if u is None:
+        return CallUsage()
+    prompt = int(getattr(u, "prompt_tokens", 0) or 0)
+    completion = int(getattr(u, "completion_tokens", 0) or 0)
+    total = int(getattr(u, "total_tokens", 0) or (prompt + completion))
+
+    # OpenRouter returns actual cost as an extra field on usage.
+    cost = getattr(u, "cost", None)
+    if cost is None:
+        extra = getattr(u, "model_extra", None) or {}
+        cost = extra.get("cost")
+    if cost is None:
+        cost = _estimate_cost(model, prompt, completion)
+    return CallUsage(prompt, completion, total, float(cost or 0.0))
+
+
+def _estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    model_l = model.lower()
+    for key, (in_price, out_price) in _FALLBACK_PRICES.items():
+        if key in model_l:
+            return (
+                prompt_tokens / 1_000_000 * in_price
+                + completion_tokens / 1_000_000 * out_price
+            )
+    return 0.0
 
 
 def _strip_code_fence(text: str) -> str:

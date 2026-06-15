@@ -1,8 +1,9 @@
 """Explainer agent — plain-language summary of the final SQL and result."""
 from __future__ import annotations
 
-from app.agents.deps import Deps
+from app.agents.deps import Deps, with_cost
 from app.graph.state import GraphState
+from app.llm.provider import CallUsage
 
 
 def explain(state: GraphState, deps: Deps) -> dict:
@@ -17,8 +18,9 @@ def explain(state: GraphState, deps: Deps) -> dict:
         f"Request: {state.refined_request or state.user_request}\n\n"
         f"Final SQL:\n{state.sql}{preview}"
     )
+    usage = CallUsage()
     try:
-        text = deps.llm.complete(
+        text, usage = deps.llm.complete(
             role="explainer",
             system=(
                 "Explain what THIS specific query does and what its result shows, "
@@ -38,4 +40,6 @@ def explain(state: GraphState, deps: Deps) -> dict:
         errs = state.validation.errors if state.validation else []
         error = "Could not produce a valid query: " + "; ".join(errs)
 
-    return {"explanation": text, "status": status, "error": error}
+    return with_cost(
+        {"explanation": text, "status": status, "error": error}, usage
+    )

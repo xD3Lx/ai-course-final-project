@@ -74,10 +74,22 @@ def _traced(name: str, fn: Callable[[GraphState], dict]) -> Callable[[GraphState
         t0 = time.perf_counter()
         update = dict(fn(state))
         dt = (time.perf_counter() - t0) * 1000.0
+        # Cost/token data is passed via private keys; pop so it never reaches state.
+        cost = float(update.pop("_cost", 0.0) or 0.0)
+        tokens = int(update.pop("_tokens", 0) or 0)
         summary, ok = _summarize(name, update, state)
-        logger.info("[%s] %s (%.0f ms)", name, summary, dt)
+        logger.info(
+            "[%s] %s (%.0f ms, $%.5f, %d tok)", name, summary, dt, cost, tokens
+        )
         update["trace"] = [
-            AgentStep(agent=name, summary=summary, duration_ms=round(dt, 1), ok=ok)
+            AgentStep(
+                agent=name,
+                summary=summary,
+                duration_ms=round(dt, 1),
+                ok=ok,
+                cost_usd=cost,
+                tokens=tokens,
+            )
         ]
         return update
 

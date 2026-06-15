@@ -16,6 +16,8 @@ class AgentStep(BaseModel):
     summary: str
     duration_ms: float = 0.0
     ok: bool = True
+    cost_usd: float = 0.0
+    tokens: int = 0
 
 
 class ValidationResult(BaseModel):
