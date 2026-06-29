@@ -32,10 +32,10 @@
     },
     {
       "id": "tpch_orders_per_month_1995",
-      "question": "How many orders were placed in each calendar month of 1995? Return the month and the order count.",
+      "question": "How many orders were placed in each calendar month of 1995? Return the month (number from 1 to 12) and the order count.",
       "expected_tables": ["orders"],
       "ordered": false,
-      "golden_sql": "SELECT date_trunc('MONTH', o_orderdate) AS month, COUNT(*) AS num_orders FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY date_trunc('MONTH', o_orderdate) ORDER BY month"
+      "golden_sql": "SELECT MONTH(o_orderdate) AS month, COUNT(*) AS order_count FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY MONTH(o_orderdate) ORDER BY month"
     },
     {
       "id": "tpch_customers_without_orders",
@@ -67,10 +67,10 @@
     },
     {
       "id": "tpch_running_revenue_by_month_window",
-      "question": "Show the running cumulative total of order revenue by month for 1995. Return each month, that month's order total, and the cumulative total up to and including that month, ordered by month.",
+      "question": "Show the running cumulative total of order revenue by month for 1995. Return each month (number from 1 to 12), that month's order total, and the cumulative total (with discount) up to and including that month, ordered by month.",
       "expected_tables": ["orders"],
       "ordered": true,
-      "golden_sql": "SELECT month, monthly_total, SUM(monthly_total) OVER (ORDER BY month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_total FROM (SELECT date_trunc('MONTH', o_orderdate) AS month, SUM(o_totalprice) AS monthly_total FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY date_trunc('MONTH', o_orderdate)) m ORDER BY month"
+      "golden_sql": "SELECT MONTH(o.o_orderdate) AS month, SUM(l.l_extendedprice * (1 - l.l_discount)) AS monthly_total, SUM(SUM(l.l_extendedprice * (1 - l.l_discount))) OVER (ORDER BY MONTH(o.o_orderdate) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_total FROM samples.tpch.orders AS o INNER JOIN samples.tpch.lineitem AS l ON o.o_orderkey = l.l_orderkey WHERE YEAR(o.o_orderdate) = 1995 GROUP BY MONTH(o.o_orderdate) ORDER BY month LIMIT 100"
     }
   ]
 }

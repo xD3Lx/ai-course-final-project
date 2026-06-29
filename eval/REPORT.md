@@ -41,12 +41,3 @@ python -m eval.run_eval --ids tpch_revenue_by_nation,nyctaxi_top_pickup_zips_by_
 
 Reports are written to `eval/results/eval-<timestamp>.json` and `.md`, and the
 Markdown summary is printed to the console.
-
-## Notes & limitations
-
-- Execution accuracy compares result sets, not SQL text — many correct queries
-  phrase the same answer differently, so this is the fair signal.
-- The within-row value-sort relaxation tolerates column reordering but will still
-  flag a result that selects genuinely extra/missing columns. If you want a
-  stricter or looser comparison, adjust `eval/evaluate.py`.
-- `samples.nyctaxi.trips` is a small sample table, so its aggregates are modest.

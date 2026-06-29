@@ -1,0 +1,223 @@
+{
+  "summary": {
+    "cases": 10,
+    "valid_sql_pct": 100.0,
+    "tables_match_pct": 100.0,
+    "execution_match_pct": 100.0,
+    "completed_pct": 100.0,
+    "total_cost_usd": 0.07877,
+    "total_tokens": 24117,
+    "avg_latency_ms": 15453.0
+  },
+  "cases": [
+    {
+      "id": "tpch_top_customers_by_value",
+      "question": "Show the top 10 customers by their total order value. Return the customer name and the summed order total.",
+      "status": "done",
+      "sql": "SELECT c.c_name, SUM(o.o_totalprice) AS total_order_value FROM samples.tpch.customer c JOIN samples.tpch.orders o ON c.c_custkey = o.o_custkey GROUP BY c.c_name ORDER BY total_order_value DESC LIMIT 10",
+      "used_tables": [
+        "samples.tpch.customer",
+        "samples.tpch.orders"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.005862,
+      "tokens": 2128,
+      "latency_ms": 16021.0,
+      "execution_match": true,
+      "generated_rowcount": 10,
+      "golden_rowcount": 10
+    },
+    {
+      "id": "tpch_revenue_by_nation",
+      "question": "What is the total order revenue per nation? Return each nation name and its summed order total, highest first.",
+      "status": "done",
+      "sql": "SELECT n.n_name, SUM(o.o_totalprice) AS total_revenue FROM samples.tpch.orders AS o JOIN samples.tpch.customer AS c ON o.o_custkey = c.c_custkey JOIN samples.tpch.nation AS n ON c.c_nationkey = n.n_nationkey GROUP BY n.n_name ORDER BY total_revenue DESC LIMIT 100",
+      "used_tables": [
+        "samples.tpch.customer",
+        "samples.tpch.nation",
+        "samples.tpch.orders"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.006422,
+      "tokens": 2252,
+      "latency_ms": 14230.0,
+      "execution_match": true,
+      "generated_rowcount": 25,
+      "golden_rowcount": 25
+    },
+    {
+      "id": "tpch_top_nations_by_customers",
+      "question": "Which 5 nations have the most customers? Return the nation name and the customer count.",
+      "status": "done",
+      "sql": "SELECT n.n_name, COUNT(DISTINCT c.c_custkey) AS customer_count FROM samples.tpch.customer c JOIN samples.tpch.nation n ON c.c_nationkey = n.n_nationkey GROUP BY n.n_name ORDER BY customer_count DESC LIMIT 5",
+      "used_tables": [
+        "samples.tpch.lineitem",
+        "samples.tpch.customer",
+        "samples.tpch.nation",
+        "samples.tpch.supplier",
+        "samples.tpch.orders"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.006616,
+      "tokens": 2370,
+      "latency_ms": 13485.0,
+      "execution_match": true,
+      "generated_rowcount": 5,
+      "golden_rowcount": 5
+    },
+    {
+      "id": "tpch_avg_balance_by_segment",
+      "question": "What is the average customer account balance for each market segment?",
+      "status": "done",
+      "sql": "SELECT c_mktsegment, AVG(c_acctbal) AS avg_account_balance FROM samples.tpch.customer GROUP BY c_mktsegment ORDER BY c_mktsegment LIMIT 100",
+      "used_tables": [
+        "samples.tpch.customer"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.0052,
+      "tokens": 1728,
+      "latency_ms": 14407.0,
+      "execution_match": true,
+      "generated_rowcount": 5,
+      "golden_rowcount": 5
+    },
+    {
+      "id": "tpch_orders_per_month_1995",
+      "question": "How many orders were placed in each calendar month of 1995? Return the month (number from 1 to 12) and the order count.",
+      "status": "done",
+      "sql": "SELECT MONTH(o_orderdate) AS month_number, COUNT(*) AS order_count FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY MONTH(o_orderdate) ORDER BY month_number LIMIT 100",
+      "used_tables": [
+        "samples.tpch.lineitem",
+        "samples.tpch.orders"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.005908,
+      "tokens": 2056,
+      "latency_ms": 12793.0,
+      "execution_match": true,
+      "generated_rowcount": 12,
+      "golden_rowcount": 12
+    },
+    {
+      "id": "tpch_customers_without_orders",
+      "question": "Which customers have never placed an order? Return their customer key and name, ordered by customer key, limited to 100.",
+      "status": "done",
+      "sql": "SELECT c.c_custkey, c.c_name FROM samples.tpch.customer c LEFT JOIN samples.tpch.orders o ON c.c_custkey = o.o_custkey WHERE o.o_custkey IS NULL ORDER BY c.c_custkey ASC LIMIT 100",
+      "used_tables": [
+        "samples.tpch.customer",
+        "samples.tpch.lineitem",
+        "samples.tpch.nation",
+        "samples.tpch.orders",
+        "samples.tpch.supplier",
+        "samples.tpch.partsupp"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.00671,
+      "tokens": 2442,
+      "latency_ms": 13285.0,
+      "execution_match": true,
+      "generated_rowcount": 100,
+      "golden_rowcount": 100
+    },
+    {
+      "id": "tpch_top_suppliers_by_inventory",
+      "question": "Find the top 5 suppliers by total inventory value, where inventory value is available quantity times supply cost. Return supplier name and inventory value.",
+      "status": "done",
+      "sql": "SELECT s.s_name, SUM(ps.ps_availqty * ps.ps_supplycost) AS total_inventory_value FROM samples.tpch.supplier s JOIN samples.tpch.partsupp ps ON s.s_suppkey = ps.ps_suppkey GROUP BY s.s_name ORDER BY total_inventory_value DESC LIMIT 5",
+      "used_tables": [
+        "samples.tpch.partsupp",
+        "samples.tpch.supplier"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.006683,
+      "tokens": 2299,
+      "latency_ms": 15086.0,
+      "execution_match": true,
+      "generated_rowcount": 5,
+      "golden_rowcount": 5
+    },
+    {
+      "id": "nyctaxi_top_pickup_zips_by_fare",
+      "question": "For NYC taxi trips, what are the top 10 pickup zip codes by average fare amount? Return the pickup zip, average fare, and number of trips.",
+      "status": "done",
+      "sql": "SELECT pickup_zip, AVG(fare_amount) AS avg_fare_amount, COUNT(*) AS trip_count FROM samples.nyctaxi.trips WHERE pickup_zip IS NOT NULL GROUP BY pickup_zip ORDER BY avg_fare_amount DESC LIMIT 10",
+      "used_tables": [
+        "samples.nyctaxi.trips",
+        "samples.tpch.lineitem"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 0,
+      "tables_match": true,
+      "cost_usd": 0.006232,
+      "tokens": 2126,
+      "latency_ms": 14805.0,
+      "execution_match": true,
+      "generated_rowcount": 10,
+      "golden_rowcount": 10
+    },
+    {
+      "id": "tpch_top_customer_per_segment_window",
+      "question": "For each market segment, find the single customer with the highest account balance. Return the market segment, customer name, and account balance.",
+      "status": "done",
+      "sql": "SELECT c_mktsegment AS market_segment, c_name AS customer_name, c_acctbal AS account_balance FROM (SELECT c_mktsegment, c_name, c_acctbal, ROW_NUMBER() OVER (PARTITION BY c_mktsegment ORDER BY c_acctbal DESC) AS rn FROM samples.tpch.customer) WHERE rn = 1 ORDER BY c_mktsegment LIMIT 100",
+      "used_tables": [
+        "samples.tpch.customer",
+        "samples.tpch.lineitem",
+        "samples.tpch.nation",
+        "samples.tpch.supplier"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 1,
+      "tables_match": true,
+      "cost_usd": 0.013486,
+      "tokens": 3262,
+      "latency_ms": 18770.0,
+      "execution_match": true,
+      "generated_rowcount": 5,
+      "golden_rowcount": 5
+    },
+    {
+      "id": "tpch_running_revenue_by_month_window",
+      "question": "Show the running cumulative total of order revenue by month for 1995. Return each month, that month's order total, and the cumulative total (with discount) up to and including that month, ordered by month.",
+      "status": "done",
+      "sql": "SELECT MONTH(o.o_orderdate) AS month, SUM(l.l_extendedprice * (1 - l.l_discount)) AS monthly_discounted_revenue, SUM(SUM(l.l_extendedprice * (1 - l.l_discount))) OVER (ORDER BY MONTH(o.o_orderdate) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_discounted_revenue FROM samples.tpch.orders AS o INNER JOIN samples.tpch.lineitem AS l ON o.o_orderkey = l.l_orderkey WHERE YEAR(o.o_orderdate) = 1995 GROUP BY MONTH(o.o_orderdate) ORDER BY month ASC LIMIT 100",
+      "used_tables": [
+        "samples.tpch.orders",
+        "samples.tpch.lineitem"
+      ],
+      "validation_ok": true,
+      "completed": true,
+      "attempts": 1,
+      "tables_match": true,
+      "cost_usd": 0.01565,
+      "tokens": 3454,
+      "latency_ms": 21646.0,
+      "execution_match": true,
+      "generated_rowcount": 12,
+      "golden_rowcount": 12
+    }
+  ]
+}
