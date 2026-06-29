@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Iterator
 
 from fastapi import APIRouter, HTTPException
@@ -157,6 +159,25 @@ def config() -> ConfigResponse:
         read_only=s.read_only,
         result_row_limit=s.result_row_limit,
     )
+
+
+@lru_cache
+def _example_questions() -> list[dict]:
+    """Load sample questions from the golden dataset (id + question)."""
+    path = Path(__file__).resolve().parents[2] / "eval" / "golden_dataset.json"
+    try:
+        data = json.loads(path.read_text())
+        return [
+            {"id": c["id"], "question": c["question"]} for c in data.get("cases", [])
+        ]
+    except Exception:  # noqa: BLE001 - examples are optional
+        logger.warning("Could not load example questions from %s", path)
+        return []
+
+
+@router.get("/examples")
+def examples() -> dict:
+    return {"examples": _example_questions()}
 
 
 @router.get("/catalogs")

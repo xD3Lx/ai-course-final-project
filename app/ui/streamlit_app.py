@@ -107,6 +107,14 @@ def _fetch_config() -> dict:
 
 
 @st.cache_data(ttl=300)
+def _fetch_examples() -> list[dict]:
+    try:
+        return requests.get(f"{API}/examples", timeout=5).json().get("examples", [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
+@st.cache_data(ttl=300)
 def _fetch_catalogs() -> list[str]:
     resp = requests.get(f"{API}/catalogs", timeout=30)
     resp.raise_for_status()
@@ -142,8 +150,20 @@ with st.sidebar:
     except Exception as exc:  # noqa: BLE001
         st.error(f"Backend unreachable: {exc}")
 
+st.session_state.setdefault("request_input", "")
+
+with st.expander("💡 Example questions (from the golden dataset)", expanded=False):
+    examples = _fetch_examples()
+    if not examples:
+        st.caption("No examples available.")
+    for ex in examples:
+        if st.button(ex["question"], key=f"ex_{ex['id']}", use_container_width=True):
+            st.session_state["request_input"] = ex["question"]
+            st.rerun()
+
 request = st.text_area(
     "Describe what you want in plain language",
+    key="request_input",
     placeholder="e.g. Top 10 customers by total revenue in 2024",
     height=90,
 )
