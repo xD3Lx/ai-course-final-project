@@ -19,7 +19,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 # carries the --extra-index-url for the CPU-only torch wheels. The pip cache is
 # a BuildKit cache mount, so it never lands in an image layer.
 COPY requirements.txt ./
-RUN --mount=type=cache,target=/root/.cache/pip \
+RUN --mount=type=cache,id=s/7b78f747-b0ba-47ca-88db-2b3a9a4fcc2d-/root/.cache/pip,target=/root/.cache/pip \
     pip install -r requirements.txt
 
 # Then add the application source.
