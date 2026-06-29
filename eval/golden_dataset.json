@@ -38,20 +38,6 @@
       "golden_sql": "SELECT date_trunc('MONTH', o_orderdate) AS month, COUNT(*) AS num_orders FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY date_trunc('MONTH', o_orderdate) ORDER BY month"
     },
     {
-      "id": "tpch_top_parts_by_quantity",
-      "question": "List the top 10 parts by total quantity ordered across all line items. Return the part name and the total quantity.",
-      "expected_tables": ["lineitem", "part"],
-      "ordered": true,
-      "golden_sql": "SELECT p.p_name, SUM(l.l_quantity) AS total_qty FROM samples.tpch.lineitem l JOIN samples.tpch.part p ON l.l_partkey = p.p_partkey GROUP BY p.p_name ORDER BY total_qty DESC LIMIT 10"
-    },
-    {
-      "id": "tpch_revenue_by_shipmode",
-      "question": "What is the total revenue (extended price after discount) for each ship mode? Return ship mode and revenue, highest first.",
-      "expected_tables": ["lineitem"],
-      "ordered": true,
-      "golden_sql": "SELECT l_shipmode, SUM(l_extendedprice * (1 - l_discount)) AS revenue FROM samples.tpch.lineitem GROUP BY l_shipmode ORDER BY revenue DESC"
-    },
-    {
       "id": "tpch_customers_without_orders",
       "question": "Which customers have never placed an order? Return their customer key and name, ordered by customer key, limited to 100.",
       "expected_tables": ["customer", "orders"],
@@ -71,6 +57,20 @@
       "expected_tables": ["trips"],
       "ordered": true,
       "golden_sql": "SELECT pickup_zip, AVG(fare_amount) AS avg_fare, COUNT(*) AS trips FROM samples.nyctaxi.trips GROUP BY pickup_zip ORDER BY avg_fare DESC LIMIT 10"
+    },
+    {
+      "id": "tpch_top_customer_per_segment_window",
+      "question": "For each market segment, find the single customer with the highest account balance. Return the market segment, customer name, and account balance.",
+      "expected_tables": ["customer"],
+      "ordered": false,
+      "golden_sql": "SELECT c_mktsegment, c_name, c_acctbal FROM (SELECT c_mktsegment, c_name, c_acctbal, ROW_NUMBER() OVER (PARTITION BY c_mktsegment ORDER BY c_acctbal DESC, c_custkey) AS rn FROM samples.tpch.customer) t WHERE rn = 1 ORDER BY c_mktsegment"
+    },
+    {
+      "id": "tpch_running_revenue_by_month_window",
+      "question": "Show the running cumulative total of order revenue by month for 1995. Return each month, that month's order total, and the cumulative total up to and including that month, ordered by month.",
+      "expected_tables": ["orders"],
+      "ordered": true,
+      "golden_sql": "SELECT month, monthly_total, SUM(monthly_total) OVER (ORDER BY month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_total FROM (SELECT date_trunc('MONTH', o_orderdate) AS month, SUM(o_totalprice) AS monthly_total FROM samples.tpch.orders WHERE YEAR(o_orderdate) = 1995 GROUP BY date_trunc('MONTH', o_orderdate)) m ORDER BY month"
     }
   ]
 }
